@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api, API_URL } from '../lib/api';
+import { api, API_URL, getMediaUrl } from '../lib/api';
 import { CheckCircle, Upload, X } from 'lucide-react';
 
 const budgets = [
@@ -245,7 +245,7 @@ export default function BookingForm() {
               </label>
               {uploadedImageUrl ? (
                 <div className="relative">
-                  <img src={uploadedImageUrl} alt="Uploaded garden" className="w-full h-48 object-cover rounded-xl" />
+                  <img src={getMediaUrl(uploadedImageUrl)} alt="Uploaded garden" className="w-full h-48 object-cover rounded-xl" />
                   <button
                     type="button"
                     onClick={removeImage}

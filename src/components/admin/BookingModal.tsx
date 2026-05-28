@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api } from '../../lib/api';
+import { api, getMediaUrl } from '../../lib/api';
 import { X, Save } from 'lucide-react';
 
 interface Booking {
@@ -174,12 +174,12 @@ export default function BookingModal({ booking, onClose, onUpdate }: BookingModa
               <label className="block text-sm font-semibold text-gray-700 mb-2">Customer Uploaded Image</label>
               <div className="relative group">
                 <img
-                  src={formData.image_url}
+                  src={getMediaUrl(formData.image_url)}
                   alt="Customer garden"
                   className="w-full rounded-xl shadow-lg"
                 />
                 <a
-                  href={formData.image_url}
+                  href={getMediaUrl(formData.image_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all"

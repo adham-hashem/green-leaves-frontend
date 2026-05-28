@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../lib/api';
+import { api, API_URL, getMediaUrl } from '../../lib/api';
 import { Trash2, Plus, Upload, Image as ImageIcon, Film } from 'lucide-react';
 
 interface Project {
@@ -250,7 +250,7 @@ export default function BeforeAfterManagement() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none disabled:bg-gray-100"
                     />
                     {formData.before_image_url && (
-                      <img src={formData.before_image_url} alt="Before" className="mt-2 h-32 w-full object-cover rounded-lg" />
+                      <img src={getMediaUrl(formData.before_image_url)} alt="Before" className="mt-2 h-32 w-full object-cover rounded-lg" />
                     )}
                   </div>
 
@@ -264,7 +264,7 @@ export default function BeforeAfterManagement() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none disabled:bg-gray-100"
                     />
                     {formData.after_image_url && (
-                      <img src={formData.after_image_url} alt="After" className="mt-2 h-32 w-full object-cover rounded-lg" />
+                      <img src={getMediaUrl(formData.after_image_url)} alt="After" className="mt-2 h-32 w-full object-cover rounded-lg" />
                     )}
                   </div>
                 </div>
@@ -288,7 +288,7 @@ export default function BeforeAfterManagement() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none disabled:bg-gray-100"
                     />
                     {formData.before_video_url && (
-                      <video src={formData.before_video_url} className="mt-2 h-32 w-full object-cover rounded-lg" controls />
+                      <video src={getMediaUrl(formData.before_video_url)} className="mt-2 h-32 w-full object-cover rounded-lg" controls />
                     )}
                   </div>
 
@@ -302,7 +302,7 @@ export default function BeforeAfterManagement() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none disabled:bg-gray-100"
                     />
                     {formData.after_video_url && (
-                      <video src={formData.after_video_url} className="mt-2 h-32 w-full object-cover rounded-lg" controls />
+                      <video src={getMediaUrl(formData.after_video_url)} className="mt-2 h-32 w-full object-cover rounded-lg" controls />
                     )}
                   </div>
                 </div>
@@ -345,23 +345,23 @@ export default function BeforeAfterManagement() {
                   {isVideo ? (
                     <>
                       <video
-                        src={project.before_video_url}
+                        src={getMediaUrl(project.before_video_url)}
                         className="w-full h-full object-cover transition-opacity group-hover:opacity-50"
                       />
                       <video
-                        src={project.after_video_url}
+                        src={getMediaUrl(project.after_video_url)}
                         className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity"
                       />
                     </>
                   ) : (
                     <>
                       <img
-                        src={project.before_image_url}
+                        src={getMediaUrl(project.before_image_url)}
                         alt="Before"
                         className="w-full h-full object-cover transition-opacity group-hover:opacity-50"
                       />
                       <img
-                        src={project.after_image_url}
+                        src={getMediaUrl(project.after_image_url)}
                         alt="After"
                         className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity"
                       />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { api } from '../lib/api';
+import { api, API_URL, getMediaUrl } from '../lib/api';
 import { Play, Pause, ArrowLeft, Image, Film, Grid3x3, LayoutGrid, Leaf } from 'lucide-react';
+
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -328,7 +329,7 @@ export default function BeforeAfterPage() {
                           <div className="relative w-full aspect-[4/3] overflow-hidden">
                             {/* Before Image */}
                             <img
-                              src={project.before_image_url}
+                              src={getMediaUrl(project.before_image_url)}
                               alt="Before"
                               className="absolute inset-0 w-full h-full object-cover"
                             />
@@ -339,7 +340,7 @@ export default function BeforeAfterPage() {
                               style={{ width: `${sliderPos}%` }}
                             >
                               <img
-                                src={project.after_image_url}
+                                src={getMediaUrl(project.after_image_url)}
                                 alt="After"
                                 className="absolute inset-0 h-full object-cover"
                                 style={{ width: `${(100 / (sliderPos || 1)) * 100}%`, maxWidth: 'none' }}
@@ -412,9 +413,9 @@ export default function BeforeAfterPage() {
                             {!isPlaying ? (
                               <div className="relative w-full h-full">
                                 <video
-                                  src={project.before_video_url}
+                                  src={getMediaUrl(project.before_video_url)}
                                   className="w-full h-full object-cover"
-                                  poster={project.before_image_url}
+                                  poster={getMediaUrl(project.before_image_url)}
                                 />
                                 <button
                                   onClick={() => toggleVideoPlayback(project.id)}
@@ -429,7 +430,7 @@ export default function BeforeAfterPage() {
                               <div className="relative w-full h-full flex">
                                 <div className="w-1/2 h-full relative">
                                   <video
-                                    src={project.before_video_url}
+                                    src={getMediaUrl(project.before_video_url)}
                                     autoPlay
                                     controls
                                     className="w-full h-full object-cover"
@@ -440,7 +441,7 @@ export default function BeforeAfterPage() {
                                 </div>
                                 <div className="w-1/2 h-full relative border-l-4 border-white">
                                   <video
-                                    src={project.after_video_url}
+                                    src={getMediaUrl(project.after_video_url)}
                                     autoPlay
                                     controls
                                     className="w-full h-full object-cover"

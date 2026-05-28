@@ -1,6 +1,10 @@
 let rawApiUrl = import.meta.env.VITE_API_URL 
-  || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-      ? window.location.origin 
+  || (typeof window !== 'undefined' 
+      ? (window.location.hostname.endsWith('.vercel.app') 
+          ? 'https://green-leaves.runasp.net' 
+          : (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+              ? window.location.origin 
+              : 'http://localhost:5032'))
       : 'http://localhost:5032');
 
 // Auto-correct domain-only URLs (e.g., green-leaves.runasp.net) to use https://
@@ -9,6 +13,17 @@ if (rawApiUrl && !rawApiUrl.startsWith('http://') && !rawApiUrl.startsWith('http
 }
 
 export const API_URL = rawApiUrl;
+
+export const getMediaUrl = (url: string | undefined | null): string => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  
+  // Normalize path with leading slash
+  let formattedUrl = url.startsWith('/') ? url : `/${url}`;
+  
+  // Support mapping existing plural paths to singular if required by backend, but here we can keep the exact path returned
+  return `${API_URL}${formattedUrl}`;
+};
 
 // Entity Interfaces
 export interface Service {
@@ -337,12 +352,14 @@ export const api = {
     },
 
     getPublicUrl(bucket: string, filePath: string): string {
-      if (filePath && !filePath.startsWith('http') && !filePath.startsWith('/uploads/')) {
-        return `${API_URL}/uploads/${bucket}/${filePath}`;
-      } else if (filePath && filePath.startsWith('/uploads/')) {
-        return `${API_URL}${filePath}`;
+      if (!filePath) return '';
+      if (filePath.startsWith('http://') || filePath.startsWith('https://')) return filePath;
+      
+      const formattedPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+      if (formattedPath.startsWith('/uploads/') || formattedPath.startsWith('/upload/')) {
+        return `${API_URL}${formattedPath}`;
       }
-      return filePath;
+      return `${API_URL}/upload/${bucket}${formattedPath}`;
     }
   }
 };
