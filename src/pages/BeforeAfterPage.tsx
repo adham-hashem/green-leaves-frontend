@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, API_URL, getMediaUrl } from '../lib/api';
-import { Play, Pause, ArrowLeft, Image, Film, Grid3x3, LayoutGrid, Leaf } from 'lucide-react';
+import { Play, Pause, ArrowLeft, Image, Film, Grid3x3, LayoutGrid, Leaf, X, ArrowRight, Maximize2 } from 'lucide-react';
 
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
@@ -30,6 +30,23 @@ export default function BeforeAfterPage() {
   const [playingVideos, setPlayingVideos] = useState<Set<string>>(new Set());
   const [filterType, setFilterType] = useState<string>('all');
   const [gridSize, setGridSize] = useState<'large' | 'small'>('large');
+
+  const [activeLightboxProject, setActiveLightboxProject] = useState<Project | null>(null);
+  const [lightboxTab, setLightboxTab] = useState<'before' | 'after'>('after');
+
+  const handlePrevProject = () => {
+    if (!activeLightboxProject) return;
+    const currentIndex = filteredProjects.findIndex((p) => p.id === activeLightboxProject.id);
+    const prevIndex = (currentIndex - 1 + filteredProjects.length) % filteredProjects.length;
+    setActiveLightboxProject(filteredProjects[prevIndex]);
+  };
+
+  const handleNextProject = () => {
+    if (!activeLightboxProject) return;
+    const currentIndex = filteredProjects.findIndex((p) => p.id === activeLightboxProject.id);
+    const nextIndex = (currentIndex + 1) % filteredProjects.length;
+    setActiveLightboxProject(filteredProjects[nextIndex]);
+  };
 
   useEffect(() => {
     fetchProjects();
@@ -324,32 +341,45 @@ export default function BeforeAfterPage() {
                       className="group bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
                     >
                       {/* Media Container */}
-                      <div className="relative overflow-hidden bg-gray-100">
+                      <div className="relative overflow-hidden bg-black">
                         {isImageProject && (
                           <div className="relative w-full aspect-[4/3] overflow-hidden">
-                            {/* Before Image */}
-                            <img
-                              src={getMediaUrl(project.before_image_url)}
-                              alt="Before"
-                              className="absolute inset-0 w-full h-full object-cover"
-                            />
+                            {/* Before Image with Blur Background */}
+                            <div className="absolute inset-0 w-full h-full">
+                              <img
+                                src={getMediaUrl(project.before_image_url)}
+                                alt=""
+                                className="absolute inset-0 w-full h-full object-cover blur-md opacity-35 scale-105"
+                              />
+                              <img
+                                src={getMediaUrl(project.before_image_url)}
+                                alt="Before"
+                                className="absolute inset-0 w-full h-full object-contain z-10"
+                              />
+                            </div>
 
                             {/* After Image with Slider */}
                             <div
-                              className="absolute inset-0 overflow-hidden transition-all duration-75"
+                              className="absolute inset-0 overflow-hidden transition-all duration-75 z-20"
                               style={{ width: `${sliderPos}%` }}
                             >
-                              <img
-                                src={getMediaUrl(project.after_image_url)}
-                                alt="After"
-                                className="absolute inset-0 h-full object-cover"
-                                style={{ width: `${(100 / (sliderPos || 1)) * 100}%`, maxWidth: 'none' }}
-                              />
+                              <div className="absolute inset-0 w-full h-full bg-black" style={{ width: `${(100 / (sliderPos || 1)) * 100}%`, maxWidth: 'none' }}>
+                                <img
+                                  src={getMediaUrl(project.after_image_url)}
+                                  alt=""
+                                  className="absolute inset-0 w-full h-full object-cover blur-md opacity-35 scale-105"
+                                />
+                                <img
+                                  src={getMediaUrl(project.after_image_url)}
+                                  alt="After"
+                                  className="absolute inset-0 w-full h-full object-contain z-10"
+                                />
+                              </div>
                             </div>
 
                             {/* Slider */}
                             <div
-                              className="absolute top-0 bottom-0 w-1 bg-white shadow-2xl cursor-col-resize z-10"
+                              className="absolute top-0 bottom-0 w-1 bg-white shadow-2xl cursor-col-resize z-30"
                               style={{ left: `${sliderPos}%` }}
                               onMouseDown={(e) => {
                                 e.preventDefault();
@@ -398,12 +428,24 @@ export default function BeforeAfterPage() {
                             </div>
 
                             {/* Labels */}
-                            <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                            <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-lg z-30">
                               Before
                             </div>
-                            <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                            <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-lg z-30">
                               After
                             </div>
+
+                            {/* Maximize Button */}
+                            <button
+                              onClick={() => {
+                                setActiveLightboxProject(project);
+                                setLightboxTab('after');
+                              }}
+                              className="absolute bottom-4 left-4 z-30 bg-black/75 hover:bg-green-600 text-white hover:scale-110 p-2.5 rounded-full backdrop-blur-sm transition-all shadow-lg"
+                              title="View Full Size"
+                            >
+                              <Maximize2 className="w-5 h-5" />
+                            </button>
                           </div>
                         )}
 
@@ -414,7 +456,7 @@ export default function BeforeAfterPage() {
                               <div className="relative w-full h-full">
                                 <video
                                   src={getMediaUrl(project.before_video_url)}
-                                  className="w-full h-full object-cover"
+                                  className="w-full h-full object-contain"
                                   poster={getMediaUrl(project.before_image_url)}
                                 />
                                 <button
@@ -433,9 +475,9 @@ export default function BeforeAfterPage() {
                                     src={getMediaUrl(project.before_video_url)}
                                     autoPlay
                                     controls
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-contain"
                                   />
-                                  <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg z-10">
+                                  <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-lg z-10">
                                     Before
                                   </div>
                                 </div>
@@ -444,9 +486,9 @@ export default function BeforeAfterPage() {
                                     src={getMediaUrl(project.after_video_url)}
                                     autoPlay
                                     controls
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-contain"
                                   />
-                                  <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg z-10">
+                                  <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-xs md:text-sm font-bold shadow-lg z-10">
                                     After
                                   </div>
                                 </div>
@@ -458,6 +500,18 @@ export default function BeforeAfterPage() {
                                 </button>
                               </div>
                             )}
+
+                            {/* Maximize Button for Video */}
+                            <button
+                              onClick={() => {
+                                setActiveLightboxProject(project);
+                                setLightboxTab('after');
+                              }}
+                              className="absolute bottom-4 left-4 z-30 bg-black/75 hover:bg-green-600 text-white hover:scale-110 p-2.5 rounded-full backdrop-blur-sm transition-all shadow-lg"
+                              title="View Full Size"
+                            >
+                              <Maximize2 className="w-5 h-5" />
+                            </button>
                           </div>
                         )}
 
@@ -519,6 +573,120 @@ export default function BeforeAfterPage() {
           </div>
         </div>
       </main>
+
+      {/* Lightbox Modal */}
+      {activeLightboxProject && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 md:p-8 animate-in fade-in duration-300">
+          {/* Header Controls */}
+          <div className="flex justify-between items-center w-full max-w-7xl mx-auto z-10 text-white mb-4">
+            <div>
+              <h4 className="text-xl md:text-2xl font-bold text-white leading-tight">{activeLightboxProject.title}</h4>
+              {activeLightboxProject.description && (
+                <p className="text-gray-400 text-xs md:text-sm mt-1">{activeLightboxProject.description}</p>
+              )}
+            </div>
+            <button
+              onClick={() => setActiveLightboxProject(null)}
+              className="bg-white/10 hover:bg-white/20 text-white rounded-full p-2.5 transition-colors focus:outline-none animate-pulse hover:animate-none"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="flex-1 w-full max-w-7xl mx-auto flex items-center justify-between gap-4 relative">
+            {/* Navigation - Left */}
+            <button
+              onClick={handlePrevProject}
+              className="absolute left-0 md:left-4 z-20 bg-black/60 hover:bg-black/80 text-white border border-white/10 rounded-full p-3.5 hover:scale-105 transition-all focus:outline-none hidden sm:block shadow-2xl"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+
+            {/* Dynamic Media View */}
+            <div className="flex-1 h-full max-h-[70vh] md:max-h-[75vh] w-full flex items-center justify-center overflow-hidden rounded-2xl relative select-none">
+              {(activeLightboxProject.media_type === 'video' || activeLightboxProject.media_type === 'both') && lightboxTab === 'before' && activeLightboxProject.before_video_url ? (
+                <video
+                  key={`before-vid-${activeLightboxProject.id}`}
+                  src={getMediaUrl(activeLightboxProject.before_video_url)}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                />
+              ) : (activeLightboxProject.media_type === 'video' || activeLightboxProject.media_type === 'both') && lightboxTab === 'after' && activeLightboxProject.after_video_url ? (
+                <video
+                  key={`after-vid-${activeLightboxProject.id}`}
+                  src={getMediaUrl(activeLightboxProject.after_video_url)}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                />
+              ) : (
+                <img
+                  key={`${lightboxTab}-${activeLightboxProject.id}`}
+                  src={getMediaUrl(lightboxTab === 'before' ? activeLightboxProject.before_image_url : activeLightboxProject.after_image_url)}
+                  alt={lightboxTab === 'before' ? 'Before transformation' : 'After transformation'}
+                  className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-300"
+                />
+              )}
+            </div>
+
+            {/* Navigation - Right */}
+            <button
+              onClick={handleNextProject}
+              className="absolute right-0 md:right-4 z-20 bg-black/60 hover:bg-black/80 text-white border border-white/10 rounded-full p-3.5 hover:scale-105 transition-all focus:outline-none hidden sm:block shadow-2xl"
+            >
+              <ArrowRight className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Bottom Controls */}
+          <div className="w-full max-w-lg mx-auto flex flex-col items-center justify-center gap-4 z-10 py-4">
+            {/* Before / After Selector Tabs */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1 border border-white/10 flex w-full">
+              <button
+                onClick={() => setLightboxTab('before')}
+                className={`flex-1 font-bold text-center py-2.5 rounded-lg text-sm transition-all ${
+                  lightboxTab === 'before'
+                    ? 'bg-green-600 text-white shadow-lg shadow-green-600/30'
+                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Before View
+              </button>
+              <button
+                onClick={() => setLightboxTab('after')}
+                className={`flex-1 font-bold text-center py-2.5 rounded-lg text-sm transition-all ${
+                  lightboxTab === 'after'
+                    ? 'bg-green-600 text-white shadow-lg shadow-green-600/30'
+                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                After View
+              </button>
+            </div>
+
+            {/* Small Navigation for Mobile */}
+            <div className="flex gap-4 sm:hidden w-full">
+              <button
+                onClick={handlePrevProject}
+                className="flex-1 flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/10 rounded-xl py-3 text-sm font-semibold transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Previous
+              </button>
+              <button
+                onClick={handleNextProject}
+                className="flex-1 flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/10 rounded-xl py-3 text-sm font-semibold transition-colors"
+              >
+                Next
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, API_URL, getMediaUrl } from '../../lib/api';
-import { Trash2, Plus, Upload, Image as ImageIcon, Film } from 'lucide-react';
+import { Trash2, Plus, Upload, Image as ImageIcon, Film, Edit } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -30,6 +30,7 @@ export default function BeforeAfterManagement() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProjects();
@@ -87,6 +88,36 @@ export default function BeforeAfterManagement() {
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      before_image_url: '',
+      after_image_url: '',
+      before_video_url: '',
+      after_video_url: '',
+      media_type: 'image',
+    });
+    setEditingId(null);
+    setError('');
+    setShowForm(false);
+  };
+
+  const handleEdit = (project: Project) => {
+    setFormData({
+      title: project.title,
+      description: project.description || '',
+      before_image_url: project.before_image_url || '',
+      after_image_url: project.after_image_url || '',
+      before_video_url: project.before_video_url || '',
+      after_video_url: project.after_video_url || '',
+      media_type: project.media_type,
+    });
+    setEditingId(project.id);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -114,31 +145,37 @@ export default function BeforeAfterManagement() {
     }
 
     try {
-      const { error: insertError } = await api.projects.create({
-        title: formData.title,
-        description: formData.description,
-        before_image_url: formData.before_image_url || undefined,
-        after_image_url: formData.after_image_url || undefined,
-        before_video_url: formData.before_video_url || undefined,
-        after_video_url: formData.after_video_url || undefined,
-        media_type: formData.media_type,
-      });
+      if (editingId) {
+        const { error: updateError } = await api.projects.update(editingId, {
+          id: editingId,
+          title: formData.title,
+          description: formData.description,
+          before_image_url: formData.before_image_url || undefined,
+          after_image_url: formData.after_image_url || undefined,
+          before_video_url: formData.before_video_url || undefined,
+          after_video_url: formData.after_video_url || undefined,
+          media_type: formData.media_type,
+        });
 
-      if (insertError) throw insertError;
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await api.projects.create({
+          title: formData.title,
+          description: formData.description,
+          before_image_url: formData.before_image_url || undefined,
+          after_image_url: formData.after_image_url || undefined,
+          before_video_url: formData.before_video_url || undefined,
+          after_video_url: formData.after_video_url || undefined,
+          media_type: formData.media_type,
+        });
 
-      setFormData({
-        title: '',
-        description: '',
-        before_image_url: '',
-        after_image_url: '',
-        before_video_url: '',
-        after_video_url: '',
-        media_type: 'image',
-      });
-      setShowForm(false);
+        if (insertError) throw insertError;
+      }
+
+      resetForm();
       fetchProjects();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create project');
+      setError(err instanceof Error ? err.message : 'Failed to save project');
     } finally {
       setUploading(false);
     }
@@ -176,17 +213,25 @@ export default function BeforeAfterManagement() {
           <p className="text-gray-600">Manage your project showcase</p>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm) {
+              resetForm();
+            } else {
+              setShowForm(true);
+            }
+          }}
           className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center gap-2 w-full sm:w-auto justify-center"
         >
           <Plus size={20} />
-          Add Project
+          {showForm ? 'Cancel' : 'Add Project'}
         </button>
       </div>
 
       {showForm && (
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Create New Project</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+            {editingId ? 'Edit Project' : 'Create New Project'}
+          </h2>
 
           {error && (
             <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-6">
@@ -316,11 +361,11 @@ export default function BeforeAfterManagement() {
                 className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2"
               >
                 <Upload size={20} />
-                {uploading ? 'Creating...' : 'Create Project'}
+                {uploading ? 'Processing...' : (editingId ? 'Save Changes' : 'Create Project')}
               </button>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={resetForm}
                 className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 rounded-lg transition-all"
               >
                 Cancel
@@ -341,37 +386,53 @@ export default function BeforeAfterManagement() {
 
             return (
               <div key={project.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all">
-                <div className="aspect-square bg-gray-200 relative overflow-hidden group">
+                <div className="aspect-square bg-black relative overflow-hidden group">
                   {isVideo ? (
                     <>
                       <video
                         src={getMediaUrl(project.before_video_url)}
-                        className="w-full h-full object-cover transition-opacity group-hover:opacity-50"
+                        className="w-full h-full object-contain transition-opacity group-hover:opacity-50"
                       />
                       <video
                         src={getMediaUrl(project.after_video_url)}
-                        className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute inset-0 w-full h-full object-contain opacity-0 group-hover:opacity-100 transition-opacity"
                       />
                     </>
                   ) : (
                     <>
-                      <img
-                        src={getMediaUrl(project.before_image_url)}
-                        alt="Before"
-                        className="w-full h-full object-cover transition-opacity group-hover:opacity-50"
-                      />
-                      <img
-                        src={getMediaUrl(project.after_image_url)}
-                        alt="After"
-                        className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity"
-                      />
+                      {/* Before Image with Blur Background */}
+                      <div className="w-full h-full transition-opacity group-hover:opacity-0 duration-300">
+                        <img
+                          src={getMediaUrl(project.before_image_url)}
+                          alt=""
+                          className="absolute inset-0 w-full h-full object-cover blur-md opacity-35 scale-105"
+                        />
+                        <img
+                          src={getMediaUrl(project.before_image_url)}
+                          alt="Before"
+                          className="absolute inset-0 w-full h-full object-contain z-10"
+                        />
+                      </div>
+                      {/* After Image with Blur Background */}
+                      <div className="absolute inset-0 w-full h-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <img
+                          src={getMediaUrl(project.after_image_url)}
+                          alt=""
+                          className="absolute inset-0 w-full h-full object-cover blur-md opacity-35 scale-105"
+                        />
+                        <img
+                          src={getMediaUrl(project.after_image_url)}
+                          alt="After"
+                          className="absolute inset-0 w-full h-full object-contain z-10"
+                        />
+                      </div>
                     </>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <p className="text-white text-sm font-semibold">Hover to see after</p>
                   </div>
                   {isVideo && (
-                    <div className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold flex items-center gap-1">
+                    <div className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold flex items-center gap-1 z-20">
                       <Film size={12} />
                       Video
                     </div>
@@ -383,13 +444,22 @@ export default function BeforeAfterManagement() {
                   {project.description && (
                     <p className="text-gray-600 text-sm mb-4 line-clamp-2">{project.description}</p>
                   )}
-                  <button
-                    onClick={() => handleDelete(project.id)}
-                    className="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={18} />
-                    Delete
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEdit(project)}
+                      className="flex-1 flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold py-2 rounded-lg transition-colors text-sm"
+                    >
+                      <Edit size={16} />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(project.id)}
+                      className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 rounded-lg transition-colors text-sm"
+                    >
+                      <Trash2 size={16} />
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             );
