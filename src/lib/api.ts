@@ -330,7 +330,7 @@ export const api = {
         }
 
         const result = await response.json();
-        return { data: { path: result.publicUrl }, error: null };
+        return { data: { path: result.public_url || result.publicUrl }, error: null };
       } catch (error: any) {
         return { data: null, error: { message: error.message } };
       }
