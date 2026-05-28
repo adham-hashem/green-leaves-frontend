@@ -1,7 +1,14 @@
-export const API_URL = import.meta.env.VITE_API_URL 
+let rawApiUrl = import.meta.env.VITE_API_URL 
   || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
       ? window.location.origin 
       : 'http://localhost:5032');
+
+// Auto-correct domain-only URLs (e.g., green-leaves.runasp.net) to use https://
+if (rawApiUrl && !rawApiUrl.startsWith('http://') && !rawApiUrl.startsWith('https://')) {
+  rawApiUrl = `https://${rawApiUrl}`;
+}
+
+export const API_URL = rawApiUrl;
 
 // Entity Interfaces
 export interface Service {
