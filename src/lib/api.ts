@@ -196,12 +196,15 @@ export const api = {
 
   // Bookings CRUD
   bookings: {
-    async getAll(): Promise<ApiResponse<Booking[]>> {
-      const response = await fetch(`${API_URL}/api/bookings`, {
+    async getAll(page?: number, pageSize?: number): Promise<ApiResponse<any>> {
+      const url = page && pageSize
+        ? `${API_URL}/api/bookings?page=${page}&pageSize=${pageSize}`
+        : `${API_URL}/api/bookings`;
+      const response = await fetch(url, {
         method: 'GET',
         headers: getHeaders()
       });
-      return handleResponse<Booking[]>(response);
+      return handleResponse<any>(response);
     },
 
     async getById(id: string): Promise<ApiResponse<Booking>> {
@@ -250,12 +253,15 @@ export const api = {
 
   // Before & After Projects CRUD
   projects: {
-    async getAll(): Promise<ApiResponse<Project[]>> {
-      const response = await fetch(`${API_URL}/api/beforeafterprojects`, {
+    async getAll(page?: number, pageSize?: number): Promise<ApiResponse<any>> {
+      const url = page && pageSize
+        ? `${API_URL}/api/beforeafterprojects?page=${page}&pageSize=${pageSize}`
+        : `${API_URL}/api/beforeafterprojects`;
+      const response = await fetch(url, {
         method: 'GET',
         headers: getHeaders()
       });
-      return handleResponse<Project[]>(response);
+      return handleResponse<any>(response);
     },
 
     async create(project: Partial<Project>): Promise<ApiResponse<Project>> {
@@ -287,12 +293,15 @@ export const api = {
 
   // Notifications CRUD
   notifications: {
-    async getAll(limit = 20): Promise<ApiResponse<Notification[]>> {
-      const response = await fetch(`${API_URL}/api/notifications?limit=${limit}`, {
+    async getAll(limit = 20, page?: number, pageSize?: number): Promise<ApiResponse<any>> {
+      const url = page && pageSize
+        ? `${API_URL}/api/notifications?page=${page}&pageSize=${pageSize}`
+        : `${API_URL}/api/notifications?limit=${limit}`;
+      const response = await fetch(url, {
         method: 'GET',
         headers: getHeaders()
       });
-      return handleResponse<Notification[]>(response);
+      return handleResponse<any>(response);
     },
 
     async markRead(id: string): Promise<ApiResponse<void>> {

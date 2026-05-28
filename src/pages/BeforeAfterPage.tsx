@@ -34,6 +34,9 @@ export default function BeforeAfterPage() {
   const [activeLightboxProject, setActiveLightboxProject] = useState<Project | null>(null);
   const [lightboxTab, setLightboxTab] = useState<'before' | 'after'>('after');
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const projectsPerPage = 6;
+
   const handlePrevProject = () => {
     if (!activeLightboxProject) return;
     const currentIndex = filteredProjects.findIndex((p) => p.id === activeLightboxProject.id);
@@ -47,6 +50,10 @@ export default function BeforeAfterPage() {
     const nextIndex = (currentIndex + 1) % filteredProjects.length;
     setActiveLightboxProject(filteredProjects[nextIndex]);
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterType]);
 
   useEffect(() => {
     fetchProjects();
@@ -97,6 +104,11 @@ export default function BeforeAfterPage() {
         if (filterType === 'videos') return p.media_type === 'video' || p.media_type === 'both';
         return true;
       });
+
+  const totalPages = Math.ceil(filteredProjects.length / projectsPerPage);
+  const indexOfLastProject = currentPage * projectsPerPage;
+  const indexOfFirstProject = indexOfLastProject - projectsPerPage;
+  const currentProjects = filteredProjects.slice(indexOfFirstProject, indexOfLastProject);
 
   const stats = {
     total: projects.length,
@@ -328,7 +340,7 @@ export default function BeforeAfterPage() {
                   ? 'grid-cols-1 lg:grid-cols-2'
                   : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
               }`}>
-                {filteredProjects.map((project, index) => {
+                {currentProjects.map((project, index) => {
                   const comparison = comparisons.get(project.id);
                   const sliderPos = comparison?.sliderPosition || 50;
                   const isVideoProject = project.media_type === 'video' || project.media_type === 'both';
@@ -551,6 +563,41 @@ export default function BeforeAfterPage() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-12">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm"
+                >
+                  Previous
+                </button>
+                
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={`w-10 h-10 rounded-xl font-bold transition-all text-sm ${
+                      currentPage === i + 1
+                        ? 'bg-green-600 text-white shadow-lg shadow-green-600/30'
+                        : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm"
+                >
+                  Next
+                </button>
               </div>
             )}
 

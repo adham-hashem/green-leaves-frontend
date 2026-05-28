@@ -23,6 +23,13 @@ export default function BookingManagement() {
   const [showModal, setShowModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const bookingsPerPage = 8;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus]);
+
   useEffect(() => {
     fetchBookings();
   }, []);
@@ -70,6 +77,11 @@ export default function BookingManagement() {
   };
 
   const filteredBookings = filterStatus === 'all' ? bookings : bookings.filter((b) => b.status === filterStatus);
+
+  const totalPages = Math.ceil(filteredBookings.length / bookingsPerPage);
+  const indexOfLastBooking = currentPage * bookingsPerPage;
+  const indexOfFirstBooking = indexOfLastBooking - bookingsPerPage;
+  const currentBookings = filteredBookings.slice(indexOfFirstBooking, indexOfLastBooking);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -152,7 +164,7 @@ export default function BookingManagement() {
                 </tr>
               </thead>
               <tbody>
-                {filteredBookings.map((booking) => {
+                {currentBookings.map((booking) => {
                   const StatusIcon = getStatusIcon(booking.status);
                   return (
                     <tr key={booking.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
@@ -207,6 +219,41 @@ export default function BookingManagement() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-6 pt-4 border-t border-gray-100">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm"
+            >
+              Previous
+            </button>
+            
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentPage(i + 1)}
+                className={`w-10 h-10 rounded-xl font-bold transition-all text-sm ${
+                  currentPage === i + 1
+                    ? 'bg-green-600 text-white shadow-lg shadow-green-600/30'
+                    : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm"
+            >
+              Next
+            </button>
           </div>
         )}
       </div>
