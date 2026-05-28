@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import { X, Save } from 'lucide-react';
 
 interface Booking {
@@ -38,19 +38,16 @@ export default function BookingModal({ booking, onClose, onUpdate }: BookingModa
     setError('');
 
     try {
-      const { error: updateError } = await supabase
-        .from('bookings')
-        .update({
-          full_name: formData.full_name,
-          phone_number: formData.phone_number,
-          email: formData.email,
-          address: formData.address,
-          service: formData.service,
-          budget: formData.budget,
-          notes: formData.notes,
-          status: formData.status,
-        })
-        .eq('id', formData.id);
+      const { error: updateError } = await api.bookings.update(formData.id, {
+        full_name: formData.full_name,
+        phone_number: formData.phone_number,
+        email: formData.email,
+        address: formData.address,
+        service: formData.service,
+        budget: formData.budget,
+        notes: formData.notes,
+        status: formData.status as any,
+      });
 
       if (updateError) throw updateError;
 

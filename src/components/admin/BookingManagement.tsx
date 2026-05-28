@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import { CreditCard as Edit2, Trash2, Eye, Check, Clock, User } from 'lucide-react';
 import BookingModal from './BookingModal';
 
@@ -29,7 +29,7 @@ export default function BookingManagement() {
 
   const fetchBookings = async () => {
     try {
-      const { data, error } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
+      const { data, error } = await api.bookings.getAll();
 
       if (error) throw error;
       setBookings(data || []);
@@ -42,7 +42,7 @@ export default function BookingManagement() {
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
-      const { error } = await supabase.from('bookings').update({ status: newStatus }).eq('id', id);
+      const { error } = await api.bookings.updateStatus(id, newStatus);
 
       if (error) throw error;
       fetchBookings();
@@ -55,7 +55,7 @@ export default function BookingManagement() {
     if (!confirm('Are you sure you want to delete this booking?')) return;
 
     try {
-      const { error } = await supabase.from('bookings').delete().eq('id', id);
+      const { error } = await api.bookings.delete(id);
 
       if (error) throw error;
       fetchBookings();

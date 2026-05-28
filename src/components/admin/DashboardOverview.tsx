@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import { TrendingUp, Clock, CheckCircle, Users, Bell } from 'lucide-react';
 
 interface Stats {
@@ -37,7 +37,7 @@ export default function DashboardOverview({ notifications = [] }: DashboardOverv
 
   const fetchStats = async () => {
     try {
-      const { data: bookings, error } = await supabase.from('bookings').select('*');
+      const { data: bookings, error } = await api.bookings.getAll();
 
       if (error) throw error;
 

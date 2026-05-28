@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import AdminSidebar from '../components/admin/AdminSidebar';
 import DashboardOverview from '../components/admin/DashboardOverview';
 import BookingManagement from '../components/admin/BookingManagement';
@@ -32,46 +32,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchNotifications();
-
-      // Subscribe to new notifications
-      const channel = supabase
-        .channel('notifications')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-          },
-          (payload) => {
-            const newNotification = payload.new as Notification;
-            setNotifications((prev) => [newNotification, ...prev]);
-            setUnreadCount((prev) => prev + 1);
-
-            // Request browser notification permission
-            if ('Notification' in window && Notification.permission === 'granted') {
-              new Notification(newNotification.title, {
-                body: newNotification.message,
-                icon: '/logo_green_leaves.png',
-              });
-            }
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
     }
   }, [isAuthenticated]);
 
   const fetchNotifications = async () => {
     try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
+      const { data, error } = await api.notifications.getAll(20);
 
       if (error) throw error;
 
@@ -84,7 +50,8 @@ export default function AdminDashboard() {
 
   const markAsRead = async (id: string) => {
     try {
-      await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+      const { error } = await api.notifications.markRead(id);
+      if (error) throw error;
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
@@ -96,7 +63,8 @@ export default function AdminDashboard() {
 
   const markAllAsRead = async () => {
     try {
-      await supabase.from('notifications').update({ is_read: true }).neq('id', '00000000-0000-0000-0000-000000000000');
+      const { error } = await api.notifications.markAllRead();
+      if (error) throw error;
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
       setUnreadCount(0);
     } catch (error) {

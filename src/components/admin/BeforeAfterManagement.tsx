@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import { Trash2, Plus, Upload, Image as ImageIcon, Film } from 'lucide-react';
 
 interface Project {
@@ -37,10 +37,7 @@ export default function BeforeAfterManagement() {
 
   const fetchProjects = async () => {
     try {
-      const { data, error } = await supabase
-        .from('before_after_projects')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await api.projects.getAll();
 
       if (error) throw error;
       setProjects(data || []);
@@ -63,17 +60,11 @@ export default function BeforeAfterManagement() {
     const filePath = `${fieldName}/${fileName}`;
 
     try {
-      const { error: uploadError, data } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, file);
+      const { data, error: uploadError } = await api.storage.upload(bucket, file, filePath);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) throw new Error(uploadError.message);
 
-      const { data: publicUrl } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(filePath);
-
-      return publicUrl.publicUrl;
+      return data?.path || '';
     } catch (err) {
       throw err;
     }
@@ -123,17 +114,15 @@ export default function BeforeAfterManagement() {
     }
 
     try {
-      const { error: insertError } = await supabase.from('before_after_projects').insert([
-        {
-          title: formData.title,
-          description: formData.description,
-          before_image_url: formData.before_image_url || null,
-          after_image_url: formData.after_image_url || null,
-          before_video_url: formData.before_video_url || null,
-          after_video_url: formData.after_video_url || null,
-          media_type: formData.media_type,
-        },
-      ]);
+      const { error: insertError } = await api.projects.create({
+        title: formData.title,
+        description: formData.description,
+        before_image_url: formData.before_image_url || undefined,
+        after_image_url: formData.after_image_url || undefined,
+        before_video_url: formData.before_video_url || undefined,
+        after_video_url: formData.after_video_url || undefined,
+        media_type: formData.media_type,
+      });
 
       if (insertError) throw insertError;
 
@@ -159,7 +148,7 @@ export default function BeforeAfterManagement() {
     if (!confirm('Are you sure you want to delete this project?')) return;
 
     try {
-      const { error } = await supabase.from('before_after_projects').delete().eq('id', id);
+      const { error } = await api.projects.delete(id);
 
       if (error) throw error;
       fetchProjects();

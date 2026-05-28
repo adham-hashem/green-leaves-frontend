@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import { Plus, Trash2, CreditCard as Edit2, Save, X, Leaf } from 'lucide-react';
 
 interface Service {
@@ -33,10 +33,7 @@ export default function AdminServices() {
 
   const fetchServices = async () => {
     try {
-      const { data, error } = await supabase
-        .from('services')
-        .select('*')
-        .order('display_order', { ascending: true });
+      const { data, error } = await api.services.getAll();
 
       if (error) throw error;
       setServices(data || []);
@@ -72,14 +69,11 @@ export default function AdminServices() {
 
     try {
       if (editingId) {
-        const { error } = await supabase
-          .from('services')
-          .update(formData)
-          .eq('id', editingId);
+        const { error } = await api.services.update(editingId, formData);
 
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('services').insert([formData]);
+        const { error } = await api.services.create(formData);
 
         if (error) throw error;
       }
@@ -108,7 +102,7 @@ export default function AdminServices() {
     if (!confirm('Are you sure you want to delete this service?')) return;
 
     try {
-      const { error } = await supabase.from('services').delete().eq('id', id);
+      const { error } = await api.services.delete(id);
 
       if (error) throw error;
       fetchServices();

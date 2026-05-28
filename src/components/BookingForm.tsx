@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase, API_URL } from '../lib/supabase';
+import { api, API_URL } from '../lib/api';
 import { CheckCircle, Upload, X } from 'lucide-react';
 
 const budgets = [
@@ -33,11 +33,7 @@ export default function BookingForm() {
 
   const fetchServices = async () => {
     try {
-      const { data, error } = await supabase
-        .from('services')
-        .select('title')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+      const { data, error } = await api.services.getAll(true);
 
       if (error) throw error;
 
@@ -76,17 +72,13 @@ export default function BookingForm() {
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `booking-images/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('booking-uploads')
-        .upload(filePath, file);
+      const { data: uploadData, error: uploadError } = await api.storage.upload('booking-uploads', file, filePath);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) throw new Error(uploadError.message);
 
-      const { data: publicUrl } = supabase.storage
-        .from('booking-uploads')
-        .getPublicUrl(filePath);
-
-      setUploadedImageUrl(publicUrl.publicUrl);
+      if (uploadData) {
+        setUploadedImageUrl(uploadData.path);
+      }
     } catch (err) {
       console.error('Upload error:', err);
       alert('Failed to upload image. Please try again.');
@@ -109,16 +101,12 @@ export default function BookingForm() {
         image_url: uploadedImageUrl,
       };
 
-      const { error } = await supabase.from('bookings').insert([bookingData]);
+      const { error } = await api.bookings.create(bookingData);
 
       if (error) throw error;
 
-      // Create notification for admin
-      await supabase.from('notifications').insert([{
-        type: 'booking',
-        title: 'New Booking Received',
-        message: `${formData.full_name} booked ${formData.service}`,
-      }]);
+      // Note: The C# backend automatically seeds administrative notifications 
+      // upon booking creation, so explicit client-side notification insertion is bypassed.
 
       // Trigger push notification (optional - requires setup)
       try {

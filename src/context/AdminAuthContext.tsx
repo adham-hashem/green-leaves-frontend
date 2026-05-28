@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 interface AdminAuthContextType {
   isAuthenticated: boolean;
@@ -20,27 +20,14 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     checkAuth();
-    const unsubscribe = supabase.auth.onAuthStateChange((event, session) => {
-      (async () => {
-        if (session) {
-          setIsAuthenticated(true);
-          setAdminEmail(session.user.email || null);
-        } else {
-          setIsAuthenticated(false);
-          setAdminEmail(null);
-        }
-      })();
-    });
-
-    return () => unsubscribe.data?.subscription?.unsubscribe();
   }, []);
 
   const checkAuth = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
+      const { data } = await api.auth.getSession();
+      if (data?.session) {
         setIsAuthenticated(true);
-        setAdminEmail(session.user.email || null);
+        setAdminEmail(data.session.user.email || null);
       } else {
         setIsAuthenticated(false);
         setAdminEmail(null);
@@ -56,7 +43,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     setLoading(true);
     try {
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      const { data, error: loginError } = await api.auth.signInWithPassword({
         email,
         password,
       });
@@ -82,7 +69,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     setLoading(true);
     try {
-      await supabase.auth.signOut();
+      await api.auth.signOut();
       setIsAuthenticated(false);
       setAdminEmail(null);
     } catch (err) {

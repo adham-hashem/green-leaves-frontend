@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { Play, Pause, ArrowLeft, Image, Film, Grid3x3, LayoutGrid, Leaf } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
@@ -32,55 +32,11 @@ export default function BeforeAfterPage() {
 
   useEffect(() => {
     fetchProjects();
-
-    // Subscribe to real-time updates for projects
-    const channel = supabase
-      .channel('before_after_projects_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'before_after_projects',
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newProject = payload.new as Project;
-            setProjects((prev) => [newProject, ...prev]);
-            setComparisons((prev) => {
-              const updated = new Map(prev);
-              updated.set(newProject.id, { projectId: newProject.id, sliderPosition: 50 });
-              return updated;
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            const updatedProject = payload.new as Project;
-            setProjects((prev) =>
-              prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
-            );
-          } else if (payload.eventType === 'DELETE') {
-            const deletedId = payload.old.id;
-            setProjects((prev) => prev.filter((p) => p.id !== deletedId));
-            setComparisons((prev) => {
-              const updated = new Map(prev);
-              updated.delete(deletedId);
-              return updated;
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   const fetchProjects = async () => {
     try {
-      const { data, error } = await supabase
-        .from('before_after_projects')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await api.projects.getAll();
 
       if (error) throw error;
 
