@@ -1,0 +1,568 @@
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { Play, Pause, ArrowLeft, Image, Film, Grid3x3, LayoutGrid, Leaf } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+
+interface Project {
+  id: string;
+  title: string;
+  description: string;
+  before_image_url: string;
+  after_image_url: string;
+  before_video_url?: string;
+  after_video_url?: string;
+  media_type: string;
+  created_at: string;
+}
+
+interface ComparisonState {
+  projectId: string;
+  sliderPosition: number;
+}
+
+export default function BeforeAfterPage() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [comparisons, setComparisons] = useState<Map<string, ComparisonState>>(new Map());
+  const [playingVideos, setPlayingVideos] = useState<Set<string>>(new Set());
+  const [filterType, setFilterType] = useState<string>('all');
+  const [gridSize, setGridSize] = useState<'large' | 'small'>('large');
+
+  useEffect(() => {
+    fetchProjects();
+
+    // Subscribe to real-time updates for projects
+    const channel = supabase
+      .channel('before_after_projects_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'before_after_projects',
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newProject = payload.new as Project;
+            setProjects((prev) => [newProject, ...prev]);
+            setComparisons((prev) => {
+              const updated = new Map(prev);
+              updated.set(newProject.id, { projectId: newProject.id, sliderPosition: 50 });
+              return updated;
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedProject = payload.new as Project;
+            setProjects((prev) =>
+              prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old.id;
+            setProjects((prev) => prev.filter((p) => p.id !== deletedId));
+            setComparisons((prev) => {
+              const updated = new Map(prev);
+              updated.delete(deletedId);
+              return updated;
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('before_after_projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const projectsData = data || [];
+      setProjects(projectsData);
+
+      const initialComparisons = new Map();
+      projectsData.forEach((project) => {
+        initialComparisons.set(project.id, { projectId: project.id, sliderPosition: 50 });
+      });
+      setComparisons(initialComparisons);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSliderChange = (projectId: string, position: number) => {
+    const newComparisons = new Map(comparisons);
+    const current = newComparisons.get(projectId) || { projectId, sliderPosition: 50 };
+    newComparisons.set(projectId, { ...current, sliderPosition: position });
+    setComparisons(newComparisons);
+  };
+
+  const toggleVideoPlayback = (projectId: string) => {
+    const newPlaying = new Set(playingVideos);
+    if (newPlaying.has(projectId)) {
+      newPlaying.delete(projectId);
+    } else {
+      newPlaying.add(projectId);
+    }
+    setPlayingVideos(newPlaying);
+  };
+
+  const filteredProjects = filterType === 'all'
+    ? projects
+    : projects.filter((p) => {
+        if (filterType === 'images') return p.media_type === 'image' || p.media_type === 'both';
+        if (filterType === 'videos') return p.media_type === 'video' || p.media_type === 'both';
+        return true;
+      });
+
+  const stats = {
+    total: projects.length,
+    images: projects.filter((p) => p.media_type === 'image' || p.media_type === 'both').length,
+    videos: projects.filter((p) => p.media_type === 'video' || p.media_type === 'both').length,
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg font-medium">Loading gallery...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white flex flex-col">
+      <Header activeSection="gallery" />
+      <main className="flex-1">
+        {/* Custom Hero Section for Gallery */}
+        <div className="bg-gradient-to-br from-green-800 via-green-700 to-green-600 text-white py-20 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 left-0 w-96 h-96 bg-yellow-400 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+            <div className="absolute bottom-0 right-0 w-96 h-96 bg-yellow-400 rounded-full translate-x-1/2 translate-y-1/2"></div>
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <Leaf className="w-12 h-12 text-yellow-400" />
+                <h1 className="text-5xl lg:text-7xl font-bold">Our Projects</h1>
+              </div>
+
+              <p className="text-xl lg:text-2xl text-green-100 max-w-3xl mx-auto mb-10 leading-relaxed">
+                Discover the stunning transformations we've created for our clients.
+                From complete garden renovations to subtle improvements, see the difference
+                professional landscaping makes.
+              </p>
+
+              {/* Stats Cards */}
+              <div className="flex flex-wrap justify-center gap-4 lg:gap-8">
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 border border-white/20">
+                  <p className="text-3xl lg:text-4xl font-bold text-yellow-400">{stats.total}</p>
+                  <p className="text-green-100 text-sm lg:text-base">Total Projects</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 border border-white/20">
+                  <p className="text-3xl lg:text-4xl font-bold text-yellow-400">{stats.images}</p>
+                  <p className="text-green-100 text-sm lg:text-base">Photo Galleries</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 border border-white/20">
+                  <p className="text-3xl lg:text-4xl font-bold text-yellow-400">{stats.videos}</p>
+                  <p className="text-green-100 text-sm lg:text-base">Video Tours</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Gallery Section */}
+        <div className="bg-gradient-to-b from-gray-50 to-white py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Filter and Controls */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-12">
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => setFilterType('all')}
+                  className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
+                    filterType === 'all'
+                      ? 'bg-green-600 text-white shadow-lg shadow-green-600/30'
+                      : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
+                  }`}
+                >
+                  <Grid3x3 size={18} />
+                  All Projects
+                </button>
+                <button
+                  onClick={() => setFilterType('images')}
+                  className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
+                    filterType === 'images'
+                      ? 'bg-green-600 text-white shadow-lg shadow-green-600/30'
+                      : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
+                  }`}
+                >
+                  <Image size={18} />
+                  Images
+                </button>
+                <button
+                  onClick={() => setFilterType('videos')}
+                  className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
+                    filterType === 'videos'
+                      ? 'bg-green-600 text-white shadow-lg shadow-green-600/30'
+                      : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
+                  }`}
+                >
+                  <Film size={18} />
+                  Videos
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 bg-white rounded-xl p-1 shadow">
+                <button
+                  onClick={() => setGridSize('large')}
+                  className={`p-2 rounded-lg transition-colors ${
+                    gridSize === 'large' ? 'bg-green-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                  title="Large Cards"
+                >
+                  <LayoutGrid size={20} />
+                </button>
+                <button
+                  onClick={() => setGridSize('small')}
+                  className={`p-2 rounded-lg transition-colors ${
+                    gridSize === 'small' ? 'bg-green-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                  title="Small Cards"
+                >
+                  <Grid3x3 size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Instructions */}
+            <div className="bg-white rounded-2xl p-6 shadow-md mb-12 border border-gray-100">
+              <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <Leaf className="text-green-600" size={20} />
+                How to Use the Comparison Slider
+              </h3>
+              <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-600">
+                <div className="flex items-start gap-2">
+                  <div className="bg-green-100 text-green-700 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-bold">1</div>
+                  <p><strong>Desktop:</strong> Click and drag the slider left or right to compare images</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="bg-green-100 text-green-700 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-bold">2</div>
+                  <p><strong>Mobile:</strong> Touch and slide your finger to adjust the comparison</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="bg-green-100 text-green-700 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 font-bold">3</div>
+                  <p><strong>Videos:</strong> Click play button to watch side-by-side comparisons</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Projects Grid */}
+            {filteredProjects.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="max-w-4xl mx-auto">
+                  {/* Professional Placeholder */}
+                  <div className="bg-gradient-to-br from-green-50 via-white to-yellow-50 rounded-3xl shadow-xl p-16 border-2 border-green-100">
+                    <div className="max-w-md mx-auto">
+                      {/* Animated Icon */}
+                      <div className="relative mb-8">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-32 h-32 bg-green-100 rounded-full animate-pulse"></div>
+                        </div>
+                        <div className="relative flex items-center justify-center">
+                          <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-full p-6 shadow-lg">
+                            <Leaf className="w-16 h-16 text-white" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      <h3 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-4">
+                        Our Gallery is Growing
+                      </h3>
+                      <p className="text-gray-600 mb-6 leading-relaxed">
+                        We're busy creating beautiful transformations! New project showcases will be added here soon. Check back later to see our latest work.
+                      </p>
+
+                      {/* Features Preview */}
+                      <div className="grid grid-cols-3 gap-4 mb-8">
+                        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                          <Image className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                          <p className="text-xs text-gray-600 font-medium">Photo Comparisons</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                          <Film className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                          <p className="text-xs text-gray-600 font-medium">Video Tours</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                          <Leaf className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                          <p className="text-xs text-gray-600 font-medium">Garden Projects</p>
+                        </div>
+                      </div>
+
+                      {/* CTA Buttons */}
+                      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        <Link
+                          to="/"
+                          className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-xl transition-all inline-flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                        >
+                          <ArrowLeft size={20} />
+                          Return Home
+                        </Link>
+                        <Link
+                          to="/#booking"
+                          className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-8 rounded-xl transition-all inline-flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                        >
+                          Book a Consultation
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Decorative Elements */}
+                  <div className="mt-8 flex items-center justify-center gap-8 text-gray-400">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-green-200 rounded-full"></div>
+                      <span className="text-sm">Professional Landscaping</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-yellow-200 rounded-full"></div>
+                      <span className="text-sm">Garden Design</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-green-200 rounded-full"></div>
+                      <span className="text-sm">Complete Transformations</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className={`grid gap-8 ${
+                gridSize === 'large'
+                  ? 'grid-cols-1 lg:grid-cols-2'
+                  : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+              }`}>
+                {filteredProjects.map((project, index) => {
+                  const comparison = comparisons.get(project.id);
+                  const sliderPos = comparison?.sliderPosition || 50;
+                  const isVideoProject = project.media_type === 'video' || project.media_type === 'both';
+                  const isImageProject = project.media_type === 'image' || project.media_type === 'both';
+                  const isPlaying = playingVideos.has(project.id);
+
+                  return (
+                    <div
+                      key={project.id}
+                      className="group bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
+                    >
+                      {/* Media Container */}
+                      <div className="relative overflow-hidden bg-gray-100">
+                        {isImageProject && (
+                          <div className="relative w-full aspect-[4/3] overflow-hidden">
+                            {/* Before Image */}
+                            <img
+                              src={project.before_image_url}
+                              alt="Before"
+                              className="absolute inset-0 w-full h-full object-cover"
+                            />
+
+                            {/* After Image with Slider */}
+                            <div
+                              className="absolute inset-0 overflow-hidden transition-all duration-75"
+                              style={{ width: `${sliderPos}%` }}
+                            >
+                              <img
+                                src={project.after_image_url}
+                                alt="After"
+                                className="absolute inset-0 h-full object-cover"
+                                style={{ width: `${(100 / (sliderPos || 1)) * 100}%`, maxWidth: 'none' }}
+                              />
+                            </div>
+
+                            {/* Slider */}
+                            <div
+                              className="absolute top-0 bottom-0 w-1 bg-white shadow-2xl cursor-col-resize z-10"
+                              style={{ left: `${sliderPos}%` }}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                const container = e.currentTarget.parentElement;
+                                if (!container) return;
+
+                                const handleMouseMove = (moveEvent: MouseEvent) => {
+                                  const rect = container.getBoundingClientRect();
+                                  const newPos = Math.max(0, Math.min(100, ((moveEvent.clientX - rect.left) / rect.width) * 100));
+                                  handleSliderChange(project.id, newPos);
+                                };
+
+                                const handleMouseUp = () => {
+                                  document.removeEventListener('mousemove', handleMouseMove);
+                                  document.removeEventListener('mouseup', handleMouseUp);
+                                };
+
+                                document.addEventListener('mousemove', handleMouseMove);
+                                document.addEventListener('mouseup', handleMouseUp);
+                              }}
+                              onTouchStart={(e) => {
+                                const container = e.currentTarget.parentElement;
+                                if (!container) return;
+
+                                const handleTouchMove = (moveEvent: TouchEvent) => {
+                                  const rect = container.getBoundingClientRect();
+                                  const newPos = Math.max(0, Math.min(100, ((moveEvent.touches[0].clientX - rect.left) / rect.width) * 100));
+                                  handleSliderChange(project.id, newPos);
+                                };
+
+                                const handleTouchEnd = () => {
+                                  document.removeEventListener('touchmove', handleTouchMove);
+                                  document.removeEventListener('touchend', handleTouchEnd);
+                                };
+
+                                document.addEventListener('touchmove', handleTouchMove);
+                                document.addEventListener('touchend', handleTouchEnd);
+                              }}
+                            >
+                              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-full p-4 shadow-xl">
+                                <div className="flex gap-1.5">
+                                  <div className="w-1 h-8 bg-green-600 rounded-full"></div>
+                                  <div className="w-1 h-8 bg-green-600 rounded-full"></div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Labels */}
+                            <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                              Before
+                            </div>
+                            <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                              After
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Video Comparison */}
+                        {isVideoProject && (
+                          <div className="relative w-full aspect-[4/3] bg-black overflow-hidden">
+                            {!isPlaying ? (
+                              <div className="relative w-full h-full">
+                                <video
+                                  src={project.before_video_url}
+                                  className="w-full h-full object-cover"
+                                  poster={project.before_image_url}
+                                />
+                                <button
+                                  onClick={() => toggleVideoPlayback(project.id)}
+                                  className="absolute inset-0 flex items-center justify-center bg-black/50 hover:bg-black/60 transition-all"
+                                >
+                                  <div className="bg-green-600 hover:bg-green-700 text-white rounded-full p-6 shadow-2xl transform hover:scale-110 transition-all">
+                                    <Play size={40} fill="currentColor" />
+                                  </div>
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="relative w-full h-full flex">
+                                <div className="w-1/2 h-full relative">
+                                  <video
+                                    src={project.before_video_url}
+                                    autoPlay
+                                    controls
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg z-10">
+                                    Before
+                                  </div>
+                                </div>
+                                <div className="w-1/2 h-full relative border-l-4 border-white">
+                                  <video
+                                    src={project.after_video_url}
+                                    autoPlay
+                                    controls
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg z-10">
+                                    After
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => toggleVideoPlayback(project.id)}
+                                  className="absolute bottom-4 right-4 bg-red-600 hover:bg-red-700 text-white rounded-full p-3 shadow-xl transition-all z-20"
+                                >
+                                  <Pause size={24} fill="currentColor" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Project Type Badge */}
+                        {isVideoProject && !isImageProject && (
+                          <div className="absolute top-4 right-20 bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+                            <Film size={12} />
+                            VIDEO
+                          </div>
+                        )}
+                        {isImageProject && !isVideoProject && (
+                          <div className="absolute top-4 right-20 bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Image size={12} />
+                            PHOTOS
+                          </div>
+                        )}
+                        {isImageProject && isVideoProject && (
+                          <div className="absolute top-4 right-20 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+                            <Image size={12} />
+                            <Film size={12} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Project Info */}
+                      <div className="p-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">
+                            Project #{index + 1}
+                          </span>
+                        </div>
+                        <h3 className="text-xl lg:text-2xl font-bold text-gray-800 mb-3">{project.title}</h3>
+                        {project.description && (
+                          <p className="text-gray-600 leading-relaxed">{project.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Call to Action */}
+            <div className="mt-16 text-center">
+              <div className="bg-gradient-to-r from-green-50 to-yellow-50 rounded-3xl p-12 border-2 border-green-200 shadow-lg">
+                <h3 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-4">Ready to Transform Your Garden?</h3>
+                <p className="text-gray-600 mb-8 max-w-2xl mx-auto text-lg">
+                  Let us create your own before and after transformation. Contact us today for a free consultation.
+                </p>
+                <Link
+                  to="/#booking"
+                  className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-lg hover:shadow-xl text-lg"
+                >
+                  <Leaf size={20} />
+                  Book Your Free Consultation
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}

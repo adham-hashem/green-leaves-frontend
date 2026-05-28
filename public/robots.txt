@@ -1,0 +1,10 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Allow: /before-after
+Disallow: /admin
+Disallow: /admin/
+Disallow: /admin/*
+
+# Sitemap Location
+Sitemap: https://cambridgegreenleaves.co.uk/sitemap.xml
